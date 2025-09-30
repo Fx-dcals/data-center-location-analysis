@@ -1,5 +1,4 @@
 @echo off
-echo 正在启动数据中心智能选址与能源优化系统...
-echo.
+echo 启动数据中心智能选址与能源优化系统...
 python start_system.py
 pause

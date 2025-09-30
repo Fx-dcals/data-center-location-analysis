@@ -111,7 +111,7 @@ class SatelliteService:
         
         return land_cover.rename('land_cover')
     
-    async def get_satellite_image(self, lat: float, lon: float, zoom: int = 10) -> Dict[str, Any]:
+    async def get_satellite_image(self, lat: float, lon: float, zoom: int = 10, radius: float = 1000) -> Dict[str, Any]:
         """
         获取卫星图像URL - 优先使用GEE真实卫星数据
         
@@ -119,13 +119,14 @@ class SatelliteService:
             lat: 纬度
             lon: 经度
             zoom: 缩放级别
+            radius: 分析半径（米）
             
         Returns:
             包含图像URL和元数据的字典
         """
         try:
             # 首先尝试使用GEE获取真实卫星图像
-            gee_result = await self._get_gee_satellite_image(lat, lon, zoom)
+            gee_result = await self._get_gee_satellite_image(lat, lon, zoom, radius)
             if gee_result and not gee_result.get("error"):
                 return gee_result
             
@@ -136,7 +137,7 @@ class SatelliteService:
             print(f"卫星图像获取失败: {e}")
             return await self._get_fallback_map_image(lat, lon, zoom)
     
-    async def _get_gee_satellite_image(self, lat: float, lon: float, zoom: int) -> Dict[str, Any]:
+    async def _get_gee_satellite_image(self, lat: float, lon: float, zoom: int, radius: float = 1000) -> Dict[str, Any]:
         """使用GEE获取真实卫星图像"""
         try:
             # 由于GEE Map API需要复杂的认证，我们使用静态图像API
@@ -179,16 +180,30 @@ class SatelliteService:
                 # 使用原始DN值，不进行复杂的缩放和偏移
                 rgb_image = image.select(['SR_B4', 'SR_B3', 'SR_B2'])
             
-            # 使用GEE静态图像API - 去掉min和max参数，让GEE自动处理
+            # 根据半径动态调整图像尺寸和缩放级别
+            if radius <= 1000:
+                dimensions = 400
+                zoom_level = 15
+            elif radius <= 2000:
+                dimensions = 512
+                zoom_level = 14
+            elif radius <= 5000:
+                dimensions = 600
+                zoom_level = 13
+            else:
+                dimensions = 800
+                zoom_level = 12
+            
+            # 使用GEE静态图像API - 根据半径动态调整
             image_url = rgb_image.getThumbURL({
                 'region': region,
-                'dimensions': 512,
+                'dimensions': dimensions,
                 'format': 'png',
                 'bands': ['SR_B4', 'SR_B3', 'SR_B2']
                 # 去掉min和max参数，让GEE自动处理可视化范围
             })
             
-            print(f"GEE卫星图像请求: 位置({lat}, {lon}), 缩放级别{zoom}")
+            print(f"GEE卫星图像请求: 位置({lat}, {lon}), 半径{radius}m, 尺寸{dimensions}x{dimensions}")
             print(f"GEE图像URL: {image_url}")
             
             # 检查URL是否有效
@@ -201,11 +216,13 @@ class SatelliteService:
                 "tile_url": image_url,
                 "metadata": {
                     "center": [lat, lon],
-                    "zoom": zoom,
+                    "radius": radius,
+                    "dimensions": f"{dimensions}x{dimensions}",
+                    "zoom_level": zoom_level,
                     "image_type": "真彩色RGB卫星图像",
                     "data_source": "Landsat 8/9",
                     "resolution": "30米",
-                    "coverage_radius": "20公里",
+                    "coverage_radius": f"{radius/1000}公里",
                     "map_service": "Google Earth Engine",
                     "free_service": False,
                     "gee_available": True

@@ -122,7 +122,8 @@ async def analyze_location(request: LocationRequest):
         # 6. 地理环境分析
         geographic_environment = await energy_service.analyze_geographic_environment(
             request.latitude,
-            request.longitude
+            request.longitude,
+            request.radius
         )
         
         # 7. 供电方案分析
@@ -186,23 +187,23 @@ async def analyze_cities(request: CityAnalysisRequest):
         raise HTTPException(status_code=500, detail=f"城市分析失败: {str(e)}")
 
 @app.get("/satellite/image/{lat}/{lon}")
-async def get_satellite_image(lat: float, lon: float, zoom: int = 15):
+async def get_satellite_image(lat: float, lon: float, zoom: int = 15, radius: float = 1000):
     """
     获取指定位置的卫星图像
     """
     try:
-        image_data = await satellite_service.get_satellite_image(lat, lon, zoom)
+        image_data = await satellite_service.get_satellite_image(lat, lon, zoom, radius)
         return {"image_url": image_data["url"], "metadata": image_data["metadata"]}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取卫星图像失败: {str(e)}")
 
 @app.get("/energy/resources/{lat}/{lon}")
-async def get_energy_resources(lat: float, lon: float):
+async def get_energy_resources(lat: float, lon: float, radius: float = 1000):
     """
     获取指定位置的能源资源信息
     """
     try:
-        resources = await energy_service.get_local_energy_resources(lat, lon)
+        resources = await energy_service.get_local_energy_resources(lat, lon, radius)
         return resources
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取能源资源失败: {str(e)}")

@@ -548,7 +548,7 @@ class EnergyAssessmentService:
         
         return heat_utilization
     
-    async def analyze_geographic_environment(self, lat: float, lon: float) -> Dict[str, Any]:
+    async def analyze_geographic_environment(self, lat: float, lon: float, radius: float = 1000) -> Dict[str, Any]:
         """
         分析地理环境 - 河流、海拔、森林等资源
         """
@@ -624,15 +624,17 @@ class EnergyAssessmentService:
             hazards.append("干旱")
         env_analysis["natural_hazards"] = hazards
         
-        # 生成卫星图像URL (使用Google Earth Engine Map API)
+        # 生成卫星图像数据 (使用Google Earth Engine Map API)
         # 使用GEE的Map API获取卫星图像
-        env_analysis["satellite_image_url"] = await self._get_satellite_image_url(lat, lon)
+        satellite_data = await self._get_satellite_image_data(lat, lon, radius)
+        env_analysis["satellite_image_url"] = satellite_data["url"]
+        env_analysis["satellite_image_metadata"] = satellite_data["metadata"]
         
         return env_analysis
 
-    async def _get_satellite_image_url(self, lat: float, lon: float) -> str:
+    async def _get_satellite_image_data(self, lat: float, lon: float, radius: float = 1000) -> Dict[str, Any]:
         """
-        获取卫星图像URL - 使用GEE获取真实卫星图像
+        获取卫星图像数据 - 使用GEE获取真实卫星图像
         """
         try:
             # 导入卫星服务
@@ -641,23 +643,32 @@ class EnergyAssessmentService:
             # 创建卫星服务实例
             satellite_service = SatelliteService()
             
-            # 使用GEE获取卫星图像
-            image_data = await satellite_service.get_satellite_image(lat, lon, zoom=10)
+            # 使用GEE获取卫星图像 - 使用实际半径
+            image_data = await satellite_service.get_satellite_image(lat, lon, zoom=10, radius=radius)
             
-            return image_data["url"]
+            return image_data
             
         except Exception as e:
             print(f"GEE卫星图像获取失败: {e}")
             # 返回一个占位符图像
-            return f"https://via.placeholder.com/400x600/4CAF50/FFFFFF?text=GEE图像: {lat:.2f}, {lon:.2f}"
+            return {
+                "url": f"https://via.placeholder.com/400x600/4CAF50/FFFFFF?text=GEE图像: {lat:.2f}, {lon:.2f}",
+                "metadata": {
+                    "center": [lat, lon],
+                    "radius": radius,
+                    "coverage_radius": f"{radius/1000}公里",
+                    "error": str(e),
+                    "gee_available": False
+                }
+            }
 
-    async def get_local_energy_resources(self, lat: float, lon: float) -> Dict[str, Any]:
+    async def get_local_energy_resources(self, lat: float, lon: float, radius: float = 1000) -> Dict[str, Any]:
         """
         获取当地能源资源信息
         """
         solar_data = await self._get_solar_data(lat, lon)
         wind_data = await self._get_wind_data(lat, lon)
-        env_analysis = await self.analyze_geographic_environment(lat, lon)
+        env_analysis = await self.analyze_geographic_environment(lat, lon, radius)
         
         return {
             "solar": solar_data,

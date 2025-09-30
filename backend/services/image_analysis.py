@@ -9,6 +9,7 @@ import torch
 import torchvision.transforms as transforms
 from typing import Dict, Any, List, Tuple
 import json
+import math
 from datetime import datetime
 
 class ImageAnalysisService:
@@ -75,7 +76,9 @@ class ImageAnalysisService:
             land_cover = satellite_data.get("land_cover")
             
             # 计算各类土地面积比例（基于真实数据）
-            total_area = 1256  # 20公里半径的圆形区域面积（km²）
+            # 从metadata获取实际半径，计算真实面积
+            radius_km = satellite_data.get("metadata", {}).get("radius", 1000) / 1000  # 转换为公里
+            total_area = math.pi * (radius_km ** 2)  # 圆形区域面积（km²）
             
             # 基于地理位置的估算（更准确的方法）
             lat = satellite_data.get("metadata", {}).get("center", [0, 0])[0]

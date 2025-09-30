@@ -73,16 +73,3 @@ A: 请检查：
 1. Node.js版本是否为16+
 2. 是否在frontend目录下运行npm命令
 3. 网络连接是否正常
-
-## 🆘 获取帮助
-
-如果遇到问题，请：
-1. 查看错误信息
-2. 检查依赖是否正确安装
-3. 确认GEE认证是否成功
-4. 提交Issue到GitHub仓库
-
-## 📞 联系方式
-
-- GitHub Issues: 提交问题
-- 开发者邮箱: your-email@example.com
