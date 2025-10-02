@@ -32,6 +32,7 @@
 - Node.js 16+
 - Google Earth Engine账号（必需）
 - 8GB+ RAM推荐
+- linux内核或者WSL
 
 ## 🚀 快速开始
 
